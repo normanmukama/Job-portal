@@ -560,18 +560,16 @@ const fetchJobs = async () => {
     error.value = null;
 
     try {
-        const response = await fetch("http://127.0.0.1:8000/api/jobs");
+        const response = await fetch("http://127.0.0.1:8000/api/fetch-jobs");
         if (!response.ok) {
             throw new Error(`API error: ${response.status}`);
         }
 
         const data = await response.json();
-
-        // Ensure data is an array
         if (Array.isArray(data)) {
             jobs.value = data;
         } else if (data && typeof data === "object") {
-            // If data is an object (like {data: [...]}), try to extract the array
+
             jobs.value = Array.isArray(data.data) ? data.data : [];
             console.log(
                 "API returned object instead of array, extracted:",
@@ -589,7 +587,7 @@ const fetchJobs = async () => {
         console.error("Error fetching jobs:", err);
         error.value = "Failed to load jobs. Please try again later.";
         loading.value = false;
-        jobs.value = []; // Ensure jobs is always an array
+        jobs.value = [];
     }
 };
 
@@ -612,7 +610,6 @@ const filteredJobs = computed(() => {
             (job) => job.category === selectedCategory.value
         );
     }
-
     return result;
 });
 
@@ -658,7 +655,7 @@ const filterJobs = () => {
         const jobLocation = job.location?.toLowerCase() || "";
         const jobCategory = job.category?.toLowerCase() || "";
 
-        // Search query filter (matches title, company, or location)
+        // Search query filter
         const matchesQuery =
             !query ||
             jobTitle.includes(query) ||
@@ -732,12 +729,10 @@ const newJob = reactive({
 
 // Form submission function
 const postJob = () => {
-    // Get the user data from localStorage and parse it
-    const userDataString = localStorage.getItem("user"); 
+    const userDataString = localStorage.getItem("user");
 
     if (!userDataString) {
         alert("User not logged in. Please log in again.");
-        // Redirect to login page or handle as needed
         return;
     }
 
@@ -763,7 +758,7 @@ const postJob = () => {
             user_id: userData.id.toString(),
         };
 
-        // Send the POST request to your endpoint
+        // POST JOB
         fetch("http://127.0.0.1:8000/api/jobs", {
             method: "POST",
             headers: {
@@ -778,11 +773,8 @@ const postJob = () => {
                 return response.json();
             })
             .then((data) => {
-                // Handle successful response
                 console.log("Job posted successfully:", data);
-                // Reset the form
                 resetForm();
-                // Show success message to user
                 alert("Job posted successfully!");
             });
     } catch (error) {
@@ -794,7 +786,6 @@ const postJob = () => {
     localStorage.setItem("fetchedJobs", JSON.stringify(fetchedJobs));
 };
 const resetForm = () => {
-    // Reset all form fields to their initial empty values
     newJob.title = "";
     newJob.company = "";
     newJob.location = "";
@@ -819,8 +810,6 @@ const login = async () => {
         });
 
         const { user, token } = response.data;
-
-        // Store user data & token in localStorage
         localStorage.setItem("user", JSON.stringify(user));
         localStorage.setItem("token", token);
 
@@ -828,7 +817,7 @@ const login = async () => {
         user.value = user;
         showLoginModal.value = false;
 
-        // Handle pending actions (e.g., applying for a job)
+        // Handle pending actions
         const pendingAction = localStorage.getItem("pendingAction");
         if (pendingAction) {
             const { action, jobId } = JSON.parse(pendingAction);
@@ -872,11 +861,9 @@ const registerUser = async () => {
             }
         );
 
-        // Handle successful registration
         alert("User registered successfully!");
         console.log(response.data);
     } catch (error) {
-        // Handle error response
         if (error.response && error.response.data) {
             authError.value =
                 error.response.data.message || "Registration failed!";
@@ -891,7 +878,7 @@ const logout = () => {
     user.value = {};
 };
 
-//submit APplication
+//submit Application
 const submitApplication = async () => {
     const user = JSON.parse(localStorage.getItem("user"));
 
@@ -912,8 +899,8 @@ const submitApplication = async () => {
 
     try {
         const payload = {
-            job_id: selectedJob.value.id, // Now correctly set
-            user_id: user.id, // Fetched from localStorage
+            job_id: selectedJob.value.id,
+            user_id: user.id,
             cover_letter: application.value.coverLetter,
             resume_url: application.value.resumeUrl,
         };
@@ -943,7 +930,7 @@ const submitApplication = async () => {
     }
 };
 
-// Modal navigation helpers
+// Modal navigation
 const switchToLogin = () => {
     showRegisterModal.value = false;
     showLoginModal.value = true;
