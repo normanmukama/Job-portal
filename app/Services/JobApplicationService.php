@@ -35,13 +35,11 @@ public function createApplication(array $data): JobApplication
         $data['status'] = 'pending';
     }
 
-    // Create application in a transaction
     try {
         return DB::transaction(function () use ($data) {
             return JobApplication::create($data);
         });
     } catch (Exception $e) {
-        // Log the error and rethrow
         logger()->error('Failed to create job application: ' . $e->getMessage());
         throw $e;
     }

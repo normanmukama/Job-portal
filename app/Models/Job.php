@@ -18,8 +18,8 @@ class Job extends Model
         'company',
         'location',
         'salary',
-        'type', // full-time, part-time, contract
-        'status', // active, filled, expired
+        'type',
+        'status', 
         'category',
         'user_id'
     ];

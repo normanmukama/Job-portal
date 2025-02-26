@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Validator;
 class JobApplicationController extends Controller
 {
     /**
-     * 
+     *
      *
      * @param Request $request
      * @return JsonResponse
@@ -62,7 +62,6 @@ class JobApplicationController extends Controller
             ], 201);
 
         } catch (\Exception $e) {
-            // 7. Handle exceptions
             return response()->json([
                 'message' => 'Failed to create application',
                 'error' => $e->getMessage()

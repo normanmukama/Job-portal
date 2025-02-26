@@ -435,14 +435,20 @@
                     </div>
                     <div class="mb-4">
                         <label for="resume" class="block text-gray-700 mb-1"
-                            >Resume/CV</label
+                            >Resume URL (link to your PDF or Word
+                            document)</label
                         >
                         <input
-                            id="resume"
-                            type="file"
-                            class="w-full p-2 border rounded"
-                            @change="handleFileUpload"
+                            type="url"
+                            id="resumeUrl"
+                            v-model="application.resumeUrl"
+                            placeholder="https://example.com/my-resume.pdf"
+                            required
                         />
+                        <small class="form-text">
+                            Please provide a direct link to your resume (PDF or
+                            Word document)
+                        </small>
                     </div>
                     <button
                         type="submit"
@@ -569,7 +575,6 @@ const fetchJobs = async () => {
         if (Array.isArray(data)) {
             jobs.value = data;
         } else if (data && typeof data === "object") {
-
             jobs.value = Array.isArray(data.data) ? data.data : [];
             console.log(
                 "API returned object instead of array, extracted:",
@@ -582,7 +587,7 @@ const fetchJobs = async () => {
         }
 
         loading.value = false;
-        // localStorage.setItem("fetchedJobs", JSON.stringify(data));
+        localStorage.setItem("fetchedJobs", JSON.stringify(data));
     } catch (err) {
         console.error("Error fetching jobs:", err);
         error.value = "Failed to load jobs. Please try again later.";
@@ -689,23 +694,41 @@ const viewJobDetails = (job) => {
 
 // Function to apply from details page
 const applyFromDetails = (job) => {
+    // Store the selected job in local state
     selectedJob.value = job;
+
+    // Store the job_id in localStorage for persistence
+    localStorage.setItem("selectedJobId", job.id);
+
+    // Close the job details modal
     showJobDetailsModal.value = false;
+
+    // Call the application handler
     handleApplyClick(selectedJob.value);
 };
 
-
 // Function to handle job application
 const handleApplyClick = (job) => {
+    // Update selected job and ensure we have the job_id
     selectedJob.value = job;
+    const jobId = job.id;
+
+    // Store the job_id in localStorage as a backup
+    localStorage.setItem("selectedJobId", jobId);
+
     if (!isLoggedIn.value) {
+        // Show login modal if user is not logged in
         showLoginModal.value = true;
-        // Store the intent to apply after login
+
+        // Store the intent to apply after login with the job_id
         localStorage.setItem(
             "pendingAction",
-            JSON.stringify({ action: "apply", jobId: job.id })
+            JSON.stringify({ action: "apply", jobId: jobId })
         );
     } else {
+        // User is logged in, show application modal
+        // Make sure the job_id is available for the form submission
+        localStorage.setItem("currentApplicationJobId", jobId);
         showApplyModal.value = true;
     }
 };
@@ -713,6 +736,99 @@ const handleApplyClick = (job) => {
 // Function to handle file upload
 const handleFileUpload = (event) => {
     application.value.resumeFile = event.target.files[0];
+};
+//submit Application
+const submitApplication = async () => {
+    const user = JSON.parse(localStorage.getItem("user"));
+
+    if (!user || !user.id) {
+        alert("You must be logged in to apply.");
+        return;
+    }
+
+
+    // Debug: Check what's in selectedJob
+    console.log("Selected Job:", selectedJob.value);
+
+    // Get job ID from selectedJob
+    let jobId = selectedJob.value?.id;
+    console.log("Initial jobId from selectedJob:", jobId);
+
+    // If no job ID found, try localStorage
+    if (!jobId) {
+        jobId = localStorage.getItem("selectedJobId");
+        console.log("JobId from localStorage:", jobId);
+    }
+
+    // Ensure jobId is a number, not a string "undefined"
+    if (!jobId || jobId === "undefined" || jobId === undefined) {
+        alert("Error: No job selected!");
+        return;
+    }
+
+    // Convert to number if it's stored as a string
+    jobId = Number(jobId) || null;
+
+    // Final check
+    if (!jobId) {
+        alert("Error: Invalid job ID!");
+        return;
+    }
+
+    console.log("Final jobId to be used:", jobId);
+
+    if (!application.value.resumeUrl) {
+        alert("Please upload a resume before applying.");
+        return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+        alert("No token found. Please log in.");
+        return;
+    }
+
+    try {
+        const payload = {
+            job_id: jobId,
+            user_id: user.id,
+            cover_letter: application.value.coverLetter,
+            resume_url: application.value.resumeUrl,
+        };
+        console.log("Sending payload:", payload);
+
+        const response = await axios.post(
+            "http://localhost:8000/api/applications",
+            payload,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
+            }
+        );
+
+        if (response.status === 201) {
+            alert("Application submitted successfully!");
+            showApplyModal.value = false;
+
+            // Reset form
+            application.value = { coverLetter: "", resumeUrl: "" };
+
+            // Clean up localStorage after successful submission
+            localStorage.removeItem("selectedJobId");
+        } else {
+            alert("Something went wrong. Please try again.");
+        }
+    } catch (error) {
+        console.error(
+            "Error submitting application:",
+            error.response?.data || error.message
+        );
+        alert(
+            "Failed to submit application. Please check your inputs and try again."
+        );
+    }
 };
 
 import { reactive } from "vue";
@@ -876,58 +992,6 @@ const registerUser = async () => {
 const logout = () => {
     isLoggedIn.value = false;
     user.value = {};
-};
-
-//submit Application
-const submitApplication = async () => {
-    const user = JSON.parse(localStorage.getItem("user"));
-
-    if (!user || !user.id) {
-        alert("You must be logged in to apply.");
-        return;
-    }
-
-    if (!selectedJob.value || !selectedJob.value.id) {
-        alert("Error: No job selected!");
-        return;
-    }
-
-    if (!application.value.resumeUrl) {
-        alert("Please upload a resume before applying.");
-        return;
-    }
-
-    try {
-        const payload = {
-            job_id: selectedJob.value.id,
-            user_id: user.id,
-            cover_letter: application.value.coverLetter,
-            resume_url: application.value.resumeUrl,
-        };
-
-        const response = await axios.post(
-            "http://localhost:8000/api/applications",
-            payload
-        );
-
-        if (response.status === 201) {
-            alert("Application submitted successfully!");
-            showApplyModal.value = false;
-
-            // Reset form
-            application.value = { coverLetter: "", resumeUrl: "" };
-        } else {
-            alert("Something went wrong. Please try again.");
-        }
-    } catch (error) {
-        console.error(
-            "Error submitting application:",
-            error.response?.data || error.message
-        );
-        alert(
-            "Failed to submit application. Please check your inputs and try again."
-        );
-    }
 };
 
 // Modal navigation
