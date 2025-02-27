@@ -32,53 +32,30 @@ class AuthController extends Controller
         ], 201);
     }
 
-    // public function login(Request $request)
-    // {
-    //     // Validate the request
-    //     $credentials = $request->validate([
-    //         'email' => 'required|email',
-    //         'password' => 'required'
-    //     ]);
-
-    //     // Find user by email
-    //     $user = User::where('email', $request->email)->first();
-
-    //     // Check if the user exists
-    //     if (!$user || !Hash::check($request->password, $user->password)) {
-    //         return response()->json(['message' => 'Invalid credentials'], 401);
-    //     }
-
-    //     return response()->json([
-    //         'message' => 'Login successful',
-    //         'user' => $user,
-    //         // 'token' => $token // You can include token if needed
-    //     ], 200);
-    // }
-
     public function login(Request $request)
-{
-    // Validate the request
-    $credentials = $request->validate([
-        'email' => 'required|email',
-        'password' => 'required'
-    ]);
+    {
+        // Validate the request
+        $credentials = $request->validate([
+            'email' => 'required|email',
+            'password' => 'required'
+        ]);
 
-    // Find the user
-    $user = User::where('email', $request->email)->first();
+        // Find the user
+        $user = User::where('email', $request->email)->first();
 
-    // Check credentials
-    if (!$user || !Hash::check($request->password, $user->password)) {
-        return response()->json(['message' => 'Invalid credentials'], 401);
+        // Check credentials
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json(['message' => 'Invalid credentials'], 401);
+        }
+
+        // Generate a token
+        $token = $user->createToken('authToken')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Login successful',
+            'user' => $user,
+            'token' => $token
+        ], 200);
     }
-
-    // Generate a token
-    $token = $user->createToken('authToken')->plainTextToken;
-
-    return response()->json([
-        'message' => 'Login successful',
-        'user' => $user,
-        'token' => $token
-    ], 200);
-}
 
 }
